@@ -18,10 +18,10 @@ import java.nio.file.StandardCopyOption;
 
 @Service
 public class FileStorageService {
-
+   /*
     private final Path fileStorageLocation;
 
-    @Autowired
+   @Autowired
     public FileStorageService(FileStorageProperties fileStorageProperties) {
         this.fileStorageLocation = Paths.get(fileStorageProperties.getUploadDir())
                 .toAbsolutePath().normalize();
@@ -31,9 +31,9 @@ public class FileStorageService {
         } catch (Exception ex) {
             throw new FileStorageException("Could not create the directory where the uploaded files will be stored.", ex);
         }
-    }
+    }*/
 
-    public String storeFile(MultipartFile file) {
+    public String storeFile(MultipartFile file, Path fileStorageLocation) {
         // Normalize file name
         String fileName = StringUtils.cleanPath(file.getOriginalFilename());
 
@@ -44,7 +44,7 @@ public class FileStorageService {
             }
 
             // Copy file to the target location (Replacing existing file with the same name)
-            Path targetLocation = this.fileStorageLocation.resolve(fileName);
+            Path targetLocation = fileStorageLocation.resolve(fileName);
             Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
 
             return fileName;
@@ -53,9 +53,9 @@ public class FileStorageService {
         }
     }
 
-    public Resource loadFileAsResource(String fileName) {
+    public Resource loadFileAsResource(String fileName, Path fileDownloadLocation) {
         try {
-            Path filePath = this.fileStorageLocation.resolve(fileName).normalize();
+            Path filePath = fileDownloadLocation.resolve(fileName).normalize();
             Resource resource = new UrlResource(filePath.toUri());
             if(resource.exists()) {
                 return resource;

@@ -1,5 +1,6 @@
 package com.example.filedemo.controller;
 
+import com.example.filedemo.exception.InvalidPathException;
 import com.example.filedemo.payload.UploadFileResponse;
 import com.example.filedemo.service.FileStorageService;
 import org.slf4j.Logger;
@@ -15,21 +16,30 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @RestController
+@RequestMapping(value="/file-demo/v1")
 public class FileController {
 
     private static final Logger logger = LoggerFactory.getLogger(FileController.class);
 
     @Autowired
     private FileStorageService fileStorageService;
-
+    //@PreAuthorize("oauth2.hasScope('apiWriteScope')")
     @PostMapping("/uploadFile")
-    public UploadFileResponse uploadFile(@RequestParam("file") MultipartFile file) {
-        String fileName = fileStorageService.storeFile(file);
+    public UploadFileResponse uploadFile(@RequestParam("file") MultipartFile file, @RequestParam String path,
+                                         @RequestParam String clientName) {
+        logger.info(">>>>>>>> uploading the file : {},clientName : {}",path,clientName);
+
+        long startTime = System.currentTimeMillis();
+
+        String fileName = fileStorageService.storeFile(file,getPathLocation(Optional.ofNullable(path)));
 
         String fileDownloadUri = ServletUriComponentsBuilder.fromCurrentContextPath()
                 .path("/downloadFile/")
@@ -40,18 +50,26 @@ public class FileController {
                 file.getContentType(), file.getSize());
     }
 
+    private Path getPathLocation(Optional<String> path) {
+
+        return Paths.get(path.filter(p-> !p.isEmpty()).orElseThrow(() -> new InvalidPathException("path is required " +
+                                                                                                          "field"))).toAbsolutePath().normalize();
+    }
+   //@PreAuthorize("oauth2.hasScope('apiWriteScope')")
     @PostMapping("/uploadMultipleFiles")
-    public List<UploadFileResponse> uploadMultipleFiles(@RequestParam("files") MultipartFile[] files) {
+    public List<UploadFileResponse> uploadMultipleFiles(@RequestParam("files") MultipartFile[] files, @RequestParam String path,
+                                                        @RequestParam String clientName) {
         return Arrays.asList(files)
                 .stream()
-                .map(file -> uploadFile(file))
+                .map(file -> uploadFile(file,path,clientName))
                 .collect(Collectors.toList());
     }
 
-    @GetMapping("/downloadFile/{fileName:.+}")
-    public ResponseEntity<Resource> downloadFile(@PathVariable String fileName, HttpServletRequest request) {
+    @GetMapping("/downloadFile/{path}/{clientName}/{fileName:.+}")
+    public ResponseEntity<Resource> downloadFile(@PathVariable String fileName,@PathVariable String path,
+                                                 @PathVariable String clientName, HttpServletRequest request) {
         // Load file as Resource
-        Resource resource = fileStorageService.loadFileAsResource(fileName);
+        Resource resource = fileStorageService.loadFileAsResource(fileName,getPathLocation(Optional.ofNullable(path)));
 
         // Try to determine file's content type
         String contentType = null;

@@ -4,11 +4,10 @@ import com.example.filedemo.property.FileStorageProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.scheduling.annotation.EnableAsync;
 
 @SpringBootApplication
-@EnableConfigurationProperties({
-		FileStorageProperties.class
-})
+@EnableAsync
 public class FileDemoApplication {
 
 	public static void main(String[] args) {
